@@ -11,7 +11,7 @@ HPE Datacenter Care - Center of Excelence</small>
 
 # OpenShift?
 
-OpenShift is an all-in-one solution to orchestrate workloads based on containers. It uses **Google Kubernetes** internally as well as **Docker** to perform, among other features:
+OpenShift is an all-in-one solution to orchestrate workloads based on containers. It uses **Kubernetes** (from Google) internally as well as **Docker** to perform, among other features:
 
 * Application builds
 * Deployments
@@ -47,3 +47,42 @@ A minimal OpenShift installation is based on a couple of main applications runni
 * **Web Console:** The Web Console is the easy-to-use way to manage the OpenShift installation. You can do any development task from the UI, like deploying new code, manage the number of pods running (upscaling / downscaling) as well as URI Endpoints for running pods.
 * **The `oc` command:** The `oc` command is a CLI application to manage both the development flow as well as the administration flow of OpenShift. The `oc` command is the most complete way of OpenShift administration and automation.
 * **REST API:** To extend the power of the OpenShift platform, OpenShift also has an API you can use for things like deployments, S2I and so on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
