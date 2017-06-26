@@ -3,6 +3,7 @@
 <br><br><br>
 
 ![](images/hpe.png)
+
 **Patrick D'appollonio**
 <small>Hewlett-Packard Enterprise USA
 HPE Datacenter Care - Center of Excelence</small>
