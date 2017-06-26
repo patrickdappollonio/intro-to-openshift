@@ -2,11 +2,13 @@
 
 <br><br><br>
 
+![](images/hpe.png)
 **Patrick D'appollonio**
 <small>Hewlett-Packard Enterprise USA
 HPE Datacenter Care - Center of Excelence</small>
 
 ---
+
 <!-- page_number: true -->
 
 # OpenShift?
@@ -38,7 +40,7 @@ A minimal OpenShift installation is based on a couple of main applications runni
 
 ---
 
-* **Deployer:** The _semi-HA_ feature of OpenShift is, if either a change in the codebase for an S2I project or the container / pod went down, the Deployer will redeploy a new container.
+* **Deployer:** The _semi-HA_ feature of OpenShift is, if either a change in the codebase for an S2I project or the container / pod went down, the Deployer will redeploy a new container. This is the _stubborn_ piece of the software.
 * **Docker SDN:** The software-defined network based on the Docker technology. Every time a container is created, Docker will create a software-defined network which may or may not use for communication purposes between containers. By linking two containers, you're specifying that they should resolve each other by container name as the host name.
 * **Authentication:** The current OpenShift authentication is based on `HTPasswd` which you can use to create development accounts in the OpenShift installation.
 
@@ -47,6 +49,9 @@ A minimal OpenShift installation is based on a couple of main applications runni
 * **Web Console:** The Web Console is the easy-to-use way to manage the OpenShift installation. You can do any development task from the UI, like deploying new code, manage the number of pods running (upscaling / downscaling) as well as URI Endpoints for running pods.
 * **The `oc` command:** The `oc` command is a CLI application to manage both the development flow as well as the administration flow of OpenShift. The `oc` command is the most complete way of OpenShift administration and automation.
 * **REST API:** To extend the power of the OpenShift platform, OpenShift also has an API you can use for things like deployments, S2I and so on.
+
+---
+
 
 
 
