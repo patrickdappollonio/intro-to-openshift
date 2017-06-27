@@ -35,7 +35,7 @@ OpenShift is an all-in-one solution to orchestrate workloads based on containers
 
 ## How OpenShift works
 
-A combination multiple application elements makes the standard OpenShift framework. With it you can deploy Docker containers to be automatically managed by OpenShift. You'll also get some extra benefits like **if one of the OpenShift nodes goes down, the pods are going to be scheduled in a different node**.
+A combination of multiple application elements makes the standard OpenShift framework. With it you can deploy Docker containers to be automatically managed by OpenShift. You'll also get some extra benefits like **if one of the OpenShift nodes goes down, the pods are going to be scheduled in a different node**.
 
 The goal is to have Docker containers that follow the containerized mantra: **stateless applications** that use services and apps by calling their APIs.
 
@@ -52,7 +52,7 @@ The goal is to have Docker containers that follow the containerized mantra: **st
 
 Normal applications are based on the premise of single, monolithic apps with huge codebases and multiple entrypoints. Docker is a bit different: each Docker container **can only perform one operation at a time**. This operation can be running a web server, or running a database, **but not both**. 
 
-This doesn't mean that **you can simply create a second Docker container with the Database on it**, and link them to make them thing they're on the same SDN.
+This doesn't mean that **you can simply create a second Docker container with the Database on it**, and link them to make them think they're on the same SDN.
 
 **There are ways to make old monolithic apps work in Docker containers**, but this is never the proper way to go: it'll make the overall process slower and painful.
 
@@ -94,7 +94,7 @@ Things you need to know to use Docker
 
 ## :computer: Building Docker containers
 
-Each Docker container starts on a basic image, which is a descriptive way to define **how the platform will look like**. Usually, this means starting from `scratch` -- which is the name of the most basic Docker image -- and add continuously the things we need, like folder structure, applications and everything else. 
+Each Docker container starts on a basic image, which is a descriptive way to define **how the platform will look**. Usually, this means starting from `scratch` -- which is the name of the most basic Docker image -- and add continuously the things we need, like folder structure, applications and everything else. 
 
 Every time we add something to the default, basic image, we're creating a **layer** which is commited 
 
@@ -104,7 +104,7 @@ The Kernel for this Operating environment is provided by the **Host system**.
 
 ## :information_source: More technical details
 
-Docker uses a filesystem technology called _copy-on-write_. This allows to **quickly spin up Docker containers**, since the files inside the container point to the actual files in the host operating system.
+Docker uses a filesystem technology called _copy-on-write_. This allows Docker to **quickly spin up Docker containers**, since the files inside the container point to the actual files in the host operating system.
 
 Due to the filesystem mentioned above, the layers are also pointers to other copies in the filesystem. A final image **is a copy of all the combined layers in a certain point in time**: this means that even when we use the last layer actively, the contents of the previous layer remain within the same image.
 
@@ -377,7 +377,7 @@ debian          latest  a2ff708b7413  6 days ago      100 MB
 
 `docker-http-server` is a container built with a bare-bones binary file, **based on the Alpine Linux distribution** -- pretty popular in the _Docker world_ due to how small it is, and how the base image is built by just copying files, which is just **one layer**.
 
-By default, `docker-http-server` will just redirect to its Github page where the source code is stored, but, if you mount a volume inside the container, **you can serve any static file you want**, like a simple HTTP serverwith just one dependency: Docker.
+By default, `docker-http-server` will just redirect to its Github page where the source code is stored, but, if you mount a volume inside the container, **you can serve any static file you want**, like a simple HTTP server with just one dependency: Docker.
 
 Get the image by doing:
 
@@ -425,7 +425,7 @@ Since this is a Docker container that prints whatever there is on the `/html` fo
 
 ## `docker-compose`?
 
-`docker-compose` is a simple tool that will explain us the simplicity of orchestrating Docker containers in a simple way. This tool **allows us to use YAML in a declarative way to define the state of our containers** and then execute them as instructed.
+`docker-compose` is a simple tool that will allow us the simplicity of orchestrating Docker containers in a simple way. This tool **allows us to use YAML in a declarative way to define the state of our containers** and then execute them as instructed.
 
 Docker for Mac, Docker for Windows and Docker Toolbox already comes with Compose inside. For Linux, **go to the Github releases page for Docker Compose and run the two commands offered there**: it'll download and move `docker-compose` to your `$PATH`.
 
@@ -536,7 +536,7 @@ You can stop all the running containers created by `docker-compose` by running:
 docker-compose down
 ```
 
-`docker-compose` is a closest way to define environments similar to what OpenShift uses. But **OpenShift is heavily loaded with extra features, as well as different feature names**. Still, the features of the containerization engine works pretty much like `docker-compose`.
+`docker-compose` is the closest way to define environments similar to what OpenShift uses. But **OpenShift is heavily loaded with extra features, as well as different feature names**. Still, the features of the containerization engine works pretty much like `docker-compose`.
 
 ---
 
@@ -601,7 +601,7 @@ volumes:
 
 * **Dedicated / Enterprise:** OpenShift Enterprise is based on the mixes of the Container Platform as well as _"Origin"_, it include some extra business features as well as support from RedHat, nice integration with other RedHat tools, as well as an streamlined installer.
 
-* **OpenShift Origin:** Origin is the source of the whole OpenShift ecosystem. All the development happens in Origin, and then is packed and streamlined to the different other ecosystems, by first being _dogfooded_ in the OpenShift online platform. Origin develops the whole process and ecosystem, **_it's free to use_ and it includes 99% of the features of OpenShift Enterprise**, with the exception of those business features that requires a RedHat subscription or they're built as paid modules by RedHat.
+* **OpenShift Origin:** Origin is the source of the whole OpenShift ecosystem. All the development happens in Origin, and then is packed and streamlined to the different ecosystems, by first being _dogfooded_ in the OpenShift online platform. Origin develops the whole process and ecosystem, **_it's free to use_ and it includes 99% of the features of OpenShift Enterprise**, with the exception of those business features that requires a RedHat subscription or they're built as paid modules by RedHat.
 
 ---
 
