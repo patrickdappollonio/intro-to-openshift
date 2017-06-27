@@ -150,11 +150,11 @@ Due to the filesystem mentioned above, the layers are also pointers to other cop
 
 ## Example Docker container
 
-Let's create a simple demo with a Docker container that **runs an Apache server in a Docker container**, using `debian` as a base OS. This should be the basic `Dockerfile`:
+Let's create a simple demo with a Docker container that **runs an Apache server in a Docker container**, using `debian` as a base OS. This should be the basic `Dockerfile`. Also create an `index.html` file in the same directory, with a `Hello, world!` inside:
 
 ```dockerfile
 FROM debian
-MAINTAINER Patrick D’appollonio "dappollonio@hpe.com"
+MAINTAINER "Patrick D'appollonio" "dappollonio@hpe.com"
 
 RUN apt-get update && apt-get install -y apache2 \
 	&& apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -171,17 +171,17 @@ ENTRYPOINT ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 
 ---
 
-When built, we will see something like this...
+When built by running `docker build`, we will see something like this...
 
 ```bash
-$ docker build .
+$ docker build -t apache-server .
 Sending build context to Docker daemon 2.048 kB
 Step 1/9 : FROM debian
 latest: Pulling from library/debian
 c75480ad9aaf: Pull complete
 Status: Downloaded newer image for debian:latest
  ---> a2ff708b7413
-Step 2/9 : MAINTAINER Patrick D’appollonio 
+Step 2/9 : MAINTAINER "Patrick D'appollonio" 
            "dappollonio@hpe.com"
  ---> Running in d39942078595
  ---> f61720845da6
@@ -189,7 +189,7 @@ Removing intermediate container d39942078595
 Step 3/9 : RUN apt-get update && apt-get install -y apache2 
            && apt-get clean && rm -rf /var/lib/apt/lists/*
  ---> Running in 4c3d349da87f
-... removed for brevity
+# wall of text removed for brevity
  ---> f07e09f2be55
 Removing intermediate container 4c3d349da87f
 ```
@@ -198,47 +198,200 @@ Removing intermediate container 4c3d349da87f
 
 ```bash
 Step 4/9 : ENV APACHE_RUN_USER www-data
- ---> Running in a595a14a7414
- ---> 79272e685c7a
-Removing intermediate container a595a14a7414
+ ---> Running in 4c0596830520
+ ---> fb87ed5b4a10
+Removing intermediate container 4c0596830520
 Step 5/9 : ENV APACHE_RUN_GROUP www-data
- ---> Running in df4daa26176b
- ---> 896f50ea4edb
-Removing intermediate container df4daa26176b
+ ---> Running in 4392c6e918ea
+ ---> affed0ca64ad
+Removing intermediate container 4392c6e918ea
 Step 6/9 : ENV APACHE_LOG_DIR /var/log/apache2
- ---> Running in e503fa1ba60e
- ---> a39316289abd
-Removing intermediate container e503fa1ba60e
+ ---> Running in 3bacc24149d3
+ ---> 7d386cdbacee
+Removing intermediate container 3bacc24149d3
 Step 7/9 : EXPOSE 80
- ---> Running in 63b86325cfe2
- ---> fc49fed1f389
-Removing intermediate container 63b86325cfe2
+ ---> Running in f3ae03b26805
+ ---> d13c0b38acc4
+Removing intermediate container f3ae03b26805
 Step 8/9 : ADD index.html /var/www/html/
- ---> Running in 4us2e4k98qfk
- ---> v5blbws5kbsz
-Step 9/9 : ENTRYPOINT ["/usr/sbin/apache2ctl", 
-           "-D", "FOREGROUND"]
- ---> Running in nun9zl8381gi
- ---> mkr9twrhn9zx
+ ---> 187dbc08fba0
+Removing intermediate container 5d8006768bc5
+Step 9/9 : ENTRYPOINT /usr/sbin/apache2ctl -D FOREGROUND
+ ---> Running in 7cd47dd6d8c0
+ ---> 2e703f601881
+Removing intermediate container 7cd47dd6d8c0
+Successfully built 2e703f601881
 ```
 
 ---
 
 ## Dissecting the Output:
 
-* The first step pulled down the Docker `debian` image from the public [Docker Registry](https://hub.docker.com/).
-* Each layer has a commit SHA: the first one is `a2ff708b7413`. Docker works pretty much like Git: each command is commited against their filesystem.
-* Each command is also a Docker container which gets stopped once it's done -- but it's not removed from your local computer storage.
+* The first step **pulled down the Docker `debian` image from the public [Docker Registry](https://hub.docker.com/)**.
+* All the steps of the `Dockerfile` **are commited against a source control platform built-in in Docker**. This is the _copy-on-write_ technology mentioned earlier. Each commit gets a commit SHA: the first one is `a2ff708b7413`.
+* Each one of the steps generates a **temporary "Docker image"** used to create that step, merged into the master flow, and then removed from the run flow -- but **not removed from the system**, to use it as a cache later on.
 
+---
 
+<h1 style="text-align: center">What happens if we run the same<br> <code>docker build</code> command again?</h1>
 
+---
 
+## It finishes pretty quickly!
 
+```bash
+Step 1/9 : FROM debian
+latest: Pulling from library/debian
+Status: Image is up to date for debian:latest
+ ---> a2ff708b7413
+Step 2/9 : MAINTAINER "Patrick D'appollonio"
+           "dappollonio@hpe.com"
+ ---> Using cache
+ ---> 26cdb0b65b3a
+Step 3/9 : RUN apt-get update && apt-get install -y apache2
+           && apt-get clean && rm -rf /var/lib/apt/lists/*
+ ---> Using cache
+ ---> 4ae3b13c68ed
+Step 4/9 : ENV APACHE_RUN_USER www-data
+ ---> Using cache
+ ---> fb87ed5b4a10
+Step 5/9 : ENV APACHE_RUN_GROUP www-data
+ ---> Using cache
+ ---> affed0ca64ad
+```
 
+---
 
+```bash
+Step 6/9 : ENV APACHE_LOG_DIR /var/log/apache2
+ ---> Using cache
+ ---> 7d386cdbacee
+Step 7/9 : EXPOSE 80
+ ---> Using cache
+ ---> d13c0b38acc4
+Step 8/9 : ADD index.html /var/www/html/
+ ---> Using cache
+ ---> 187dbc08fba0
+Step 9/9 : ENTRYPOINT /usr/sbin/apache2ctl -D FOREGROUND
+ ---> Using cache
+ ---> 2e703f601881
+Successfully built 2e703f601881
+```
 
+Docker is using the **cache mechanism**, that's why it builds so quickly and each step finishes with a `Using cache` message: Each step, since we already did it and it's stored in the source control platform inside Docker **can be reused by just calling it by name** (SHA).
 
+---
 
+## :white_check_mark: Let's run our new server:
+
+```bash
+docker run -p 80:80 apache-server
+
+# "-p 80:80" defines that I want to listen on the host
+# machine on port 80, and route that port to the port 80
+# inside the container.
+
+# "apache-server" is the name of the docker container 
+# created with "docker build"
+```
+
+Then, we can go into `http://localhost/` and see our result: the Apache2 server running in a Docker container.
+
+---
+
+## We can also get a terminal inside the container
+
+Let's explore our container, make sure it's running by executing `docker ps`. You should see a container ID, say, `ac2d34e3fbcc` and a name `apache-server` after we launched it in the previous step. Grab the ID and then run the following:
+
+```bash
+$ docker exec -it ac2d34e3fbcc bash
+root@ac2d34e3fbcc:/#
+```
+
+We got a prompt inside the Docker container! Let's explore a couple of things...
+
+---
+
+## Checking inside the container
+
+Checking the details of the Linux distribution:
+```text
+# uname -a
+Linux ac2d34e3fbcc 4.4.0-81-generic 104-Ubuntu SMP Wed
+Jun 14 08:17:06 UTC 2017 x86_64 GNU/Linux
+```
+
+Let's also check our file we passed to the Container:
+```text
+# cat /var/www/html/index.html
+<h1>Hello, world!</h1>
+```
+We can definitely modify the file:
+```text
+# echo "<h1>Goodbye!</h1>" > /var/www/html/index.html
+```
+
+---
+
+## :rotating_light: ... We have one problem
+
+By modifying the contents of the containers, since their storage is ephemeral, then the moment we exit `bash` and we don't save the changes -- commit them -- then we will lose them :put_litter_in_its_place:.
+
+---
+
+## :articulated_lorry: Images vs Containers
+
+To understand how to save our changes, we need to understand first the difference between a Docker *container* and a Docker *image*.
+
+* **A Docker container** is a running environment created from a Docker image that specifies a set of dependencies, applications and folder structure to run.
+* **A Docker image** is a declarative way to construct an environment based on a description on how this looks like. 
+
+Think about the **Docker Image** as the recipe to cook something, and the **Docker Container** being the cake already baked.
+
+---
+
+So, if we take our running **Docker Container** and we stop it, then we create a new one based on our **Docker Image** `apache-server` then that new container _will never have the changes we did_ to the running container, **since the "recipe" doesn't include our change**.
+
+What we need to do is:
+
+* Exit the container gracefully with `CTRL+pq`.
+* Take the current **Container ID** (in our example, `ac2d34e3fbcc`).
+* Commit the changes in `ac2d34e3fbcc` **to a new Docker Image** (each change is a new image, remember?)
+
+<br>
+
+```text
+$ docker commit ac2d34e3fbcc server-changed
+sha256:07fd4afe0955053a833de4a3f25fd234412220630484c63b49ece
+```
+
+---
+
+**Inspecting containers running:**
+
+```bash
+$ docker ps
+CONTAINER ID   IMAGE  COMMAND                 CREATED        
+ac2d34e3fbcc   demo   "/usr/sbin/apache2..."  24 minutes ago
+
+STATUS         PORTS                NAMES
+Up 24 minutes  0.0.0.0:80->80/tcp   peaceful_dubinsky
+
+# you can also print the containers stopped, by executing 
+# "docker ps -a"
+```
+
+**Inspecting images created:**
+
+```bash
+REPOSITORY      TAG     IMAGE ID      CREATED         SIZE
+server-changed  latest  07fd4afe0955  14 minutes ago  206 MB
+apache-server   latest  2e703f601881  39 minutes ago  206 MB
+debian          latest  a2ff708b7413  6 days ago      100 MB
+
+# you can also see intermediate images (the ones used to
+# build our server) by running "docker images -a"
+```
 
 
 
