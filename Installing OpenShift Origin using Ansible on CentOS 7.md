@@ -95,6 +95,20 @@ hostnamectl set-hostname "master.example.com" --static
 
 
 
+#### NetworkManager
+
+The last requirement for our environment is to have `NetworkManager` enabled and started in our environment. To install and enable it, execute the following commands:
+
+```bash
+yum install -y NetworkManager
+systemctl enable NetworkManager
+systemctl start NetworkManager
+```
+
+This should download, enable and start the `NetworkManager` service, required by the Ansible installation method.
+
+
+
 #### Cloning the OpenShift Ansible repository
 
 Once everything has been done before, we're ready to clone the OpenShift Ansible installer from Github. To do so, go to your home directory and then perform the `git clone` process:

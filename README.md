@@ -540,6 +540,49 @@ docker-compose down
 
 ---
 
+<h1 align="center">One extra example!</h1>
+
+---
+
+## WordPress + MySQL in `docker-compose`:
+
+<div style="font-size: 22px">
+
+```yaml
+version: '2'
+
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: wordpressdb
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
+
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    ports:
+      - 80:80
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpressdb
+      WORDPRESS_DB_USER: exampleuser
+      WORDPRESS_DB_PASSWORD: examplepass
+
+volumes:
+  db_data: # this will mount to a docker-configured volume
+```
+
+</div>
+
+---
+
 ![](images/openshift.png)
 
 <br>
@@ -597,3 +640,15 @@ A minimal OpenShift installation is based on a couple of main applications runni
 * **REST API:** To extend the power of the OpenShift platform, OpenShift also has an API you can use for things like deployments, S2I and so on.
 
 ---
+
+## :information_source: An side comment...
+
+From now on, we will use the word _"pod"_ interchangeably with "container"... **A "pod" is the name Kubernetes gives to Docker containers being orchestrated by the Kubernetes scheduler**. 
+
+---
+
+## Creating OpenShift projects
+
+An OpenShift project is the minimal object that holds a set of OpenShift elements needed to run our applications. **A project also serves as a namespace** to control and manage all the applications created inside the project.
+
+
