@@ -393,6 +393,166 @@ debian          latest  a2ff708b7413  6 days ago      100 MB
 # build our server) by running "docker images -a"
 ```
 
+---
 
+<div style="text-align: center">
+<img src="images/docker-logo.png">
+<h2>Let's play with <code>docker-http-server</code></h2> 
+<a href="https://github.com/patrickdappollonio/docker-http-server">github.com/patrickdappollonio/docker-http-server</a>
+</div>
 
+---
+
+## `docker-http-server` internals
+
+`docker-http-server` is a container built with a bare-bones binary file, **based on the Alpine Linux distribution** -- pretty popular in the _Docker world_ due to how small it is, and how the base image is built by just copying files, which is just **one layer**.
+
+By default, `docker-http-server` will just redirect to its Github page where the source code is stored, but, if you mount a volume inside the container, **you can serve any static file you want**, like a simple HTTP serverwith just one dependency: Docker.
+
+Get the image by doing:
+
+```bash
+docker pull patrickdappollonio/docker-http-server
+```
+
+---
+
+Now, let's use our current directory which should still have the `index.html` file with the `Hello, world!` message on it. We will mount the current directory for the Container to serve. This directory should also contain our previous `apache-server` `Dockerfile` which serves our purpose of serving static files. Let's trigger a run of our server:
+
+```text
+$ ls
+Dockerfile  index.html
+
+$ docker run -p 80:5000 -v $(pwd):/html \
+      patrickdappollonio/docker-http-server
+2017/06/27 15:43:03 Starting HTTP Server. Listening at 
+"0.0.0.0:5000"
+```
+
+---
+
+## :earth_americas: Opening the Browser and seeing the result:
+
+Once we open our browser, and due to Internet standards, the first file served in an HTTP server must be `index.html` or `index.htm`. In the browser, when we point to the local machine's IP or hostname, we will see:
+
+<p align="center"><img src="images/docker-http-server-demo.png"></p>
+
+We can also inspect the `Dockerfile` by going to `127.0.0.1/Dockerfile` (or replacing `127.0.0.1` with the hostname of the machine running Docker).
+
+---
+
+Since this is a Docker container that prints whatever there is on the `/html` folder inside the container, but being that folder a **mounted volume** we can make changes to the content of the folder locally, and **those changes will be reflected _as soon_ as we refresh the page**. Try it!
+
+---
+
+<div style="text-align: center">
+<img src="images/docker-compose-logo.png">
+<h2>Exploring <code>docker-compose</code></h2> 
+<a href="https://docs.docker.com/compose/">docs.docker.com/compose</a>
+</div>
+
+---
+
+## `docker-compose`?
+
+`docker-compose` is a simple tool that will explain us the simplicity of orchestrating Docker containers in a simple way. This tool **allows us to use YAML in a declarative way to define the state of our containers** and then execute them as instructed.
+
+Docker for Mac, Docker for Windows and Docker Toolbox already comes with Compose inside. For Linux, **go to the Github releases page for Docker Compose and run the two commands offered there**: it'll download and move `docker-compose` to your `$PATH`.
+
+---
+
+## Example of a `docker-compose.yaml` file
+
+Running our previous server is pretty simple: You just define an arbitrary name, in this case, `http-server` (it used to be called `peaceful_dubinsky` before!), the image we want to run, a port mapping as well as the volumes we will mount. We can also request the container to be restarted if it crashes for any reason...
+
+```yaml
+version: '2'
+
+services:
+  http-server: # an arbitrary name for our running container
+    image: patrickdappollonio/docker-http-server
+    ports:
+      - 80:5000 # the port mapping specified before with "-p"
+    volumes:
+      - .:/html # the dot indicates the current directory
+    restart: always
+````
+
+---
+
+To run the `docker-compose` defined environment, we just do:
+
+```text
+$ docker-compose up
+Creating network "development_default" with the 
+default driver
+Creating development_http-server_1
+Attaching to development_http-server_1
+http-server_1  | 2017/06/27 15:57:06 Starting HTTP Server. 
+Listening at "0.0.0.0:5000"
+```
+
+Note that `docker-compose` did 3 things: 
+
+* It created a network called `development_default`
+* Created the actual container `development_http-server_1`
+* Attached the output to the container `development_http-server_1`
+* Run the container in the foreground, printing the `stdout` / `stderr` on screen.
+
+---
+
+## :mega: Software-defined Networks (SDN)
+
+Internally, **all of the Docker orchestrators out there will create SDNs**. The networks are meant to be used for service discovery as well as name resolution if the containers are linked (not by default). 
+
+Assuming our previous `docker-compose.yaml`, if we add another extra container, the network created between both of them **will allow them to see each other _if they're linked_:heavy_exclamation_mark:** by using the "running name" (in our case, `development_http-server_1`).
+
+Say we have a second container named `example`. `example` can do `curl http://development_http-server_1:5000` and it'll get to our `index.html` file, using the SDN created by `docker-compose`. Still, if we try from the host machine to `curl` the container in the same way, **our computer won't know how to route that request**.
+
+---
+
+## Trying it out!
+
+Update your `docker-compose.yaml` file to look like this:
+
+```yaml
+version: '2'
+
+services:
+  http-server: # an arbitrary name for our running container
+    image: patrickdappollonio/docker-http-server
+    ports:
+      - 80:5000 # the port mapping specified before with "-p"
+    volumes:
+      - .:/html # the dot indicates the current directory
+    restart: always
+
+  ubuntu:
+    image: demo
+    restart: always
+    links:
+      - "http-server"
+```
+
+Then run it by executing `docker-compose up -d` (note the `-d` part!).
+
+---
+
+When running `docker ps`, it should show both our `patrickdappollonio/docker-http-server` running as well as our `apache-server` image. Let's get a terminal into our `apache-server` by getting the ID of the running container with `docker ps`, and then install cURL, then query our secondary container:
+
+```text
+$ docker ps
+... grab the ID of the Apache server container, 
+as well as the "name" of the docker-http-server,
+we will assume ID "6c26e55795fa" and name 
+"development_http-server_1"...
+
+$ docker exec -it 6c26e55795fa bash
+
+root@6c26e55795fa:/# apt update && apt install curl -y
+... output ommited for brevity ...
+
+root@6c26e55795fa:/# curl development_http-server_1:5000
+Hello, world!
+```
 
