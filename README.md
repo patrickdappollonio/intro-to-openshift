@@ -556,3 +556,26 @@ root@6c26e55795fa:/# curl development_http-server_1:5000
 Hello, world!
 ```
 
+---
+
+## :information_source: `docker-compose` allows us to create environments in an easy way
+
+You can stop all the running containers created by `docker-compose` by running:
+
+```bash
+docker-compose down
+```
+
+`docker-compose` is a closest way to define environments similar to what OpenShift uses. But **OpenShift is heavily loaded with extra features, as well as different feature names**. Still, the features of the containerization engine works pretty much like `docker-compose`.
+
+---
+
+![](images/openshift.png)
+
+<br>
+
+<h2 align="center">Let's talk about OpenShift :+1:</h2>
+
+---
+
+
