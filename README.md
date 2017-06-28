@@ -1389,7 +1389,7 @@ $ oc get bc/nodejs-in-docker
 Name:           nodejs-in-docker
 Namespace:      nodejs
 
-# ommited for brevity
+# ... ommited for brevity ...
 
 Strategy:       Docker
 URL:            https://github.com/patrickdappollonio/nodejs-in-docker.git
@@ -1420,3 +1420,67 @@ A couple of things to note here:
 * **It is possible to build from an specific branch**, by appending `#branch-name` after the Git URL when creating a `new-app`.
 * Since we're building starting from a `Dockerfile` which starts from its own Docker image -- in this case, `node:boron` -- then **there's also an automatic tracking mechanism** which rebuilds the project when this image from the Docker Hub gets updated.
 * **The output is also a Docker Image**, in this case `nodejs-in-docker:latest`
+
+---
+
+## :key: How about building from Private Github repositories?
+
+It is definitely possible to build from private Github repositories. To do so, you'll have to use the secrets management part of OpenShift which isn't covered in the basic training. Still, the steps to make `BuildConfig` work with private repos is:
+
+```bash
+# Generate an RSA key which you'll use for both Github and
+# the OpenShift builder image. Make sure not to add a 
+# password and not to overwrite your existent keys:
+ssh-keygen -t rsa -C "your_email@example.com"
+
+# Then, add the key to the OpenShift secret storage as an
+# `sshauth` secret:
+oc secrets new-sshauth ghk \
+    --ssh-privatekey=$HOME/.ssh/id_rsa
+```
+
+---
+
+```bash
+# Then add the new secret to the builder service account
+# so when building, it can access this secret:
+oc secrets add serviceaccount/builder \
+    secrets/ghk
+
+# Finally, modify your Build Config so it can use this
+# new secret when building:
+oc patch buildConfig <app-name> \
+    -p '{"spec":{"source":{"sourceSecret":{"name":"ghk"}}}}'
+```
+
+By doing this, you're instructing the `BuildConfig` flow, when started, **to load the secret `ghk` and authenticate with it**. 
+
+We won't cover too much about _patching_ or _secrets_, but the Documentation is always available for extra details. Secrets should be self explanatory, whereas **_patching_ takes a JSON argument and adds it to the original JSON definition** -- we saw a YAML before, but it's possible to get JSON, it's just that _it gets tricky_ to patch elements with YAML.
+
+---
+
+## :earth_americas: Exposing our NodeJS app to the world
+
+```bash
+# let's expose our app to the world using a custom domain
+# and using "oc create"
+$ oc expose svc/nodejs-in-docker -o yaml \
+    --hostname "expressapp.apps.example.com" \
+    --dry-run > ~/nodejs-in-docker.yaml
+
+# some elements were removed for brevity
+$ cat ~/nodejs-in-docker.yaml
+spec:
+  host: expressapp.apps.example.com
+  port:
+    targetPort: 8080-tcp
+  to:
+    kind: Service
+    name: nodejs-in-docker
+    
+$ oc create -f ~/nodejs-in-docker.yaml
+route "nodejs-in-docker" created
+
+$ curl expressapp.apps.example.com
+Hello world
+```
