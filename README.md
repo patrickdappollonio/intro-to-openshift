@@ -801,7 +801,40 @@ oadm policy remove-user <username>
 
 ## Managing the Login Strategies in OpenShift
 
-// todo show the Opensahift config with the htpasswd enabled
+Like I mentioned before, **the standard OpenShift installation allows anyone to Log In**. This is usually intentional to allow closed, internal platforms to quickly iterate and develop new features quickly. The configuration at `$OPENSHIFT_CONFIG/master-config.yaml` looks like this:
+
+```yaml
+oauthConfig:
+  ...
+  identityProviders:
+  - challenge: true
+    login: true
+    mappingMethod: claim
+    name: anypassword
+    provider:
+      apiVersion: v1
+      kind: AllowAllPasswordIdentityProvider
+```
+
+---
+
+Implementing the new `HTPasswdIdentityProvider` which is built-in in OpenShift **is as easy as changing the configuration parameters**:
+
+```yaml
+oauthConfig:
+  ...
+  identityProviders:
+  - challenge: true
+    login: true
+    mappingMethod: claim
+    name: demo_htpasswd_provider 
+    provider:
+      apiVersion: v1
+      kind: HTPasswdPasswordIdentityProvider
+      file: /etc/origin/master/htpasswd
+```
+
+Note that there's a `file` configuration which points to the `htpasswd` file we will set up now.
 
 ---
 
