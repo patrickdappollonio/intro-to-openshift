@@ -945,7 +945,7 @@ Let's create a demo project to toy with. Issue the following command:
 
 <div style="font-size: 22px">
 
-```bash
+```text
 $ oc new-project demo
 Now using project "demo" on server "https://master.example.com:8443".
 
@@ -962,3 +962,278 @@ to build a new example application in Ruby.
 You'll also see that OpenShift offers you a boilerplate example, **a Ruby on Rails app with a MySQL database you can deploy in one command**. This little example here has _way more features_ that we would expect to see in a first glance, so we won't run that command yet.
 
 And just as a reminder, you can change projects by running `oc project <project-name>`.
+
+---
+
+## :ship: Deploying our first container!
+
+Let's do some real work and start orchestrating containers now. **Let's run a container in our brand-new environment**. We will work with a simple one first, a `Hello, OpenShift!` container to see how everything plays together. 
+
+The container we will deploy is `patrickdappollonio/hello-docker`. While OpenShift already provides an `openshift/hello-openshift`, **we will use the `Hello, Docker!` one later down the road**, so it's better to familiarize with it for future reference.
+
+---
+
+Let's test it first, let's download the container and run it first locally, to see what it does, and then let's push it to OpenShift. In your workstation do:
+
+```text
+$ docker pull patrickdappollonio/hello-docker
+Using default tag: latest
+latest: Pulling from patrickdappollonio/hello-docker
+e5458d100942: Pull complete
+Digest: sha256:5ef638877a3b5aa05575be4dc4624f6bde600e22e...
+Status: Downloaded newer image for 
+patrickdappollonio/hello-docker:latest
+
+$ docker run -p 80:8000 patrickdappollonio/hello-docker
+2000/01/01 01:01:01 Starting Server. Listening at ":8000"
+```
+
+Then **go to your browser and navigate to the IP address where you're running the container** -- usually `localhost`. You should see a message on screen:
+
+```text
+Hello, 0f449a6e0aa5!
+```
+
+---
+
+`patrickdappollonio/hello-docker` is a minimal, bare-bones Docker container that **only has one layer**, the HTTP server. It's based from the `scratch` image, which means **there's no shell, no directory structure, no nothing**, just the HTTP server as a compiled executable **which uses system calls for everything** -- making it possible to run it using the `scratch` image, although this is usually not possible for big applications or interpreted languages.
+
+The ID you see when browsing into that container is the Docker container's `$HOSTNAME`, which in Docker defaults to the ID of the container. There are some configurations available, such as changing the display name for the `Hello, <name>!`. 
+
+
+---
+
+Let's stop the running container by pressing `CTRL+c` and then start it again, this time, with a different name (note the `-e` parameter):
+
+```text
+$ docker run -p 80:8000 -e NAME=OpenShift \
+	patrickdappollonio/hello-docker
+2000/01/01 01:01:01 Starting Server. Listening at ":8000"
+```
+
+If, in another terminal we make a request to the IP address holding the Docker engine, we will see:
+
+```bash
+$ curl http://localhost/
+Hello, OpenShift!
+```
+
+Obviously, you can change the `$NAME` to be anything you want and it'll be printed when someone make an HTTP request to that hostname.
+
+---
+
+## :ship: Pushing `hello-docker` to OpenShift
+
+Now, going back to the fun parts, let's push this container to OpenShift from your workstation. To do so, let's verify the namespace / project we are now, and if there's anything here, **then deploy our container**. Perform the following:
+
+```bash
+$ oc status
+In project demo on server https://master.example.com:8443
+
+You have no services, deployment configs, or build configs.
+Run 'oc new-app' to create an application.
+```
+
+---
+
+```bash
+$ oc new-app patrickdappollonio/hello-docker
+--> Found Docker image 68e56dd (20 hours old) from Docker 
+    Hub for "patrickdappollonio/hello-docker"
+
+    * An image stream will be created as
+      "hello-docker:latest" that will track this image
+    * This image will be deployed in deployment 
+      config "hello-docker"
+    * Port 8000/tcp will be load balanced by 
+      service "hello-docker"
+      * Other containers can access this service through 
+        the hostname "hello-docker"
+    * WARNING: Image "patrickdappollonio/hello-docker" 
+      runs as the 'root' user which may not be permitted 
+      by your cluster administrator
+
+--> Creating resources ...
+    imagestream "hello-docker" created
+    deploymentconfig "hello-docker" created
+    service "hello-docker" created
+--> Success
+    Run 'oc status' to view your app.
+```
+
+---
+
+If we ran `oc status` once again, we will see:
+
+```bash
+$ oc status
+In project demo on server https://master.example.com:8443
+
+svc/hello-docker - 172.30.70.134:8000
+  dc/hello-docker deploys istag/hello-docker:latest
+    deployment 1 deployed 2 minutes ago - 1 pod
+
+View details with 'oc describe <resource>/<name>' or list 
+everything with 'oc get all'.
+```
+
+We can also get all the running pods to see if our container is running:
+
+```bash
+$ oc get pods
+NAME                   READY     STATUS    RESTARTS   AGE
+hello-docker-1-xs03r   1/1       Running   0          3m
+```
+
+This is great: our container is running, but **it's not possible yet to access it from the outside**. We need to route it!
+
+---
+
+## :earth_americas: Having a way to access our `hello-docker` pod
+
+Now that we created our pod there are a lot of questions. We saw "image streams", "deployment config", "load balanced", and "service" which we will cover later on. For now, we want to see our code running, and to do so, **we need a way to access the container**.
+
+
+### OpenShift routes
+
+An OpenShift route **is just a configuration given to OpenShift to allow traffic to the container through the OpenShift router** -- one of the core components of our installation -- running HAProxy. Creating a route for a given service is rather easy:
+
+```bash
+$ oc expose svc/hello-docker
+route "hello-docker" exposed
+```
+
+---
+
+Once a route is created, **there's going to be a public endpoint accessible to make HTTP calls to it**. This part depends on one of the OpenShift prerequisites, which is **having a _wildcard_ A record pointing to the OpenShift router** -- usually in the Master -- ro route traffic through. 
+
+We will assume the following record, thinking that `master` is in the IP address `192.168.100.1`:
+
+```dns
+*.apps.example.com   IN   A   3600  192.168.100.1
+```
+
+**This needs to be configured at a DNS level**. Ask your Domain Name company for instructions on how to set them up.
+
+---
+
+**Once the DNS configuration is properly set**, then the format to get the URL to access our published projects is:
+
+```
+<service-name>-<project-name>.apps.example.com
+```
+
+In our case, our service name is `hello-docker`, and our project name is `demo`, so the ending URL will be: `http://hello-docker-demo.apps.example.com`. Let's see if it works:
+
+```bash
+$ curl http://hello-docker-demo.apps.example.com
+Hello, hello-docker-1-xs03r!
+```
+
+It definitely works! And we can also see the name of the running Docker container / Kubernetes pod, `hello-docker-1-xs03r`. This matches the name given when we check with `oc get pods`.
+
+---
+
+Now, regarding routes, and any other OpenShift resource, we have to say that everything is customizable. You can execute `oc expose -h` to see the full flag set **where you can customize the names and parameters**. 
+
+But there's also another option to customize settings, so let's briefly deviate from our main core to talk about it: the `oc create` command.
+
+---
+
+## :information_source: The powerful `oc create` command
+
+Pretty much all the OpenShift features you can think of **have an OpenShift command available to manage them** -- which is, _sadly_, not true for the OpenShift UI we will see later on -- but there's also an additional command, pretty powerful, called `oc create`.
+
+In short, `oc create` allows you to create any OpenShift resource given a YAML definition for it. Said it in a different way: **if you know how to define OpenShift resources in YAML, you can create any resource using the CLI** by just executing `oc create -f filename.yaml` where `filename.yaml` will contain the definition for that resource.
+
+Let's see an example...
+
+---
+
+Remove the route we just created by doing `oc delete route hello-docker`, then let's create the YAML specification for our route by doing a dry-run of the `oc expose` command, exporting the settings to a YAML file:
+
+```bash
+oc expose svc/hello-docker -o yaml --dry-run \
+	> ~/hello-docker-route.yaml
+```
+
+By running this, we will save the route definition into a file we can access later on.
+
+---
+
+If we show the contents of the file, we should see this:
+
+```yaml
+apiVersion: v1
+kind: Route
+metadata:
+  creationTimestamp: null
+  labels:
+    app: hello-docker
+  name: hello-docker
+spec:
+  host: ""
+  port:
+    targetPort: 8000-tcp
+  to:
+    kind: ""
+    name: hello-docker
+    weight: null
+status:
+  ingress: null
+```
+
+---
+
+Let's do something funny: let's modify the route so it doesn't have the format `<service>-<project>.apps.example.com` but rather just `myapp.apps.example.com`. Modify `spec.host` and write `myapp.apps.example.com` inside the quotes...
+
+```yaml
+apiVersion: v1
+kind: Route
+metadata:
+  creationTimestamp: null
+  labels:
+    app: hello-docker
+  name: hello-docker
+spec:
+  host: "myapp.apps.example.com"
+  port:
+    targetPort: 8000-tcp
+  to:
+    kind: ""
+    name: hello-docker
+    weight: null
+status:
+  ingress: null
+```
+
+---
+
+Save the file, in this case, `~/hello-docker-route.yaml` and then use `oc create -f` to create the route:
+
+```bash
+$ oc create -f ~/hello-docker-route.yaml
+route "hello-docker" created
+```
+
+Then let's verify everything works correctly:
+
+```bash
+$ oc get route hello-docker
+NAME           HOST/PORT                        
+hello-docker   myapp.apps.example.com
+
+PATH      SERVICES       PORT       TERMINATION   WILDCARD
+          hello-docker   8000-tcp                 None
+```
+
+And finally, test it out!
+
+```bash
+$ curl myapp.apps.example.com
+Hello, hello-docker-1-xs03r!
+```
+
+---
+
+Based on the same principle, **later on we will create full featured services by concatenating multiple YAML configuration files** to create _deployment configs_, _services_, _routes_ and so on. For now, this little example will stay in our `demo` project just to continue checking it out!
