@@ -641,9 +641,219 @@ A minimal OpenShift installation is based on a couple of main applications runni
 
 ---
 
-## :information_source: An side comment...
+## :information_source: A side comment...
 
 From now on, we will use the word _"pod"_ interchangeably with "container"... **A "pod" is the name Kubernetes gives to Docker containers being orchestrated by the Kubernetes scheduler**. 
+
+Additionally **we will be using an <span style="color:red; text-decoration: underline">_OpenShift Origin_</span> instance to run some commands and execute some actions**. It's usually safe to assume though that most of the OpenShift Enterprise features are available in Origin. After all, Enterprise _is just a fork_ with Business Capabilities and better support than Origin.
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>OpenShift CLI tools</h2> 
+</div>
+
+---
+
+## :floppy_disk: CLI tools
+
+Openshift **includes a series of CLI tools that can be used to manage and control the OpenShift environment**. As an OpenShift administrator, having control of the whole environment in your fingertips is essentially what you need to keep operations working. 
+
+There's going to be two CLI tools we will use during this training: the `oc` tool and the `oadm` tool. 
+
+The `oc` tool manages and control all areas related to OpenShift management, **such as project, applications and routes**.
+
+The `oadm` tool is used on **more advanced tasks related to the OpenShift internals**, such as the router or the private registry, as well as giving certain apps some extra "powers" based on the administrative privileges it'll have.
+
+---
+
+## Getting familiar with the OpenShift installation
+
+Depending on the installation method, OpenShift may have been installed **using bare-bones configuration using the `openshift` CLI application**, or using **the Ansible installer** which generates most of the configuration for you, by offloading the proper parameters to the `openshift` app.
+
+In any case, there will be a configuration folder with all the OpenShift parameters. Usually, the common locations for these settings are:
+
+* **Container platform:** `/opt/openshift/master.local.config/`
+* **Enterprise:** `/etc/openshift/master/` or `/etc/origin/master/`
+* **Origin:** `/etc/origin/master/` (Ansible), `/opt/openshift/` (self)
+
+---
+
+There's an _ongoing effort_ to **centralize all of them in a single** place no matter what version of OpenShift you have installed. From now on, we will call the config folder `$OPENSHIFT_CONFIG`.
+
+Inside the `$OPENSHIFT_CONFIG` there will be two main useful files:
+
+* The OpenShift Master configuration file, `master-config.yaml`: **This file holds the entire OpenShift configuration**, from endpoints to access control to routing. We will be working with this file a lot.
+* An `admin.kubeconfig` configuration file: Whenever you're working with OpenShift as an administrator, **you need to log in into the cluster using the Kubernetes certificates**, stored on this file.
+
+---
+
+## :key: Logging in as the OpenShift Administrator
+
+By default, and not even considering the login strategy -- more on this later -- **there's one user account already set up to manage the OpenShift installation**. This account is called `system:admin` -- and you'll note later on that all administrative accounts have the `x:y` notation, separated by a colon.
+
+The issue? :heavy_exclamation_mark: **There's no password to log in to it**. So in order to log in as `system:admin` -- which we will call "OpenShift Administrator" from now on -- **you'll have to give the OpenShift `oc` client the Kubernetes certificates**.
+
+To log in, use:
+
+```bash
+$ oc login -u system:admin \
+	--config=$OPENSHIFT_CONFIG/admin.kubeconfig
+```
+
+---
+
+When logged in as `system:admin`, you'll be greeted with something like this:
+
+```text
+Logged into "https://master.example.com:8443" as 
+"system:admin" using existing credentials.
+
+You have access to the following projects and can 
+switch between them with 'oc project <projectname>':
+
+  * default
+    kube-system
+    logging
+    management-infra
+    openshift
+    openshift-infra
+
+Using project "default".
+```
+
+Most of the alleged "projects" here are just OpenShift / Kubernetes internals that **it's advisable to never touch, unless you really know what you are doing**. 
+
+---
+
+## Types of OpenShift accounts
+
+There are 7 different account types in OpenShift, called **"roles"**:
+
+1. **`admin`:** A project manager. An admin user will have rights to view any resource in the project and modify any resource in the project except for quota.
+2. **`basic-user`:** A user that can get basic information about projects and users.
+3. **`cluster-admin`:** A super-user that can perform any action in any project. They have full control over quota and every action on every resource in the project.
+4. **`cluster-status`:** A user that can get basic cluster status information.
+
+---
+
+5. **`edit`:** A user that can modify most objects in a project, but does not have the power to view or modify roles or bindings.
+6. **`self-provisioner`:** A user that can create their own projects.
+7. **`view`:** A user who cannot make any modifications, but can see most objects in a project. They cannot view or modify roles or bindings.
+
+An OpenShift administrator can add and remove multiple roles to specific users with the `oadm` command:
+
+```bash
+oadm policy add-role-to-user <role> <username>
+oadm policy remove-role-from-user <role> <username>
+```
+
+---
+
+Sometimes, the "roles" can be given for an specific project or like in the case of the `view` role, **you might want to extend it to all available projects**. Depending on this kind of broadness, a given user can have either "local policies" or "cluster policies":
+
+* **Local Policies:** Roles that are scoped to a given project. Roles that exist only in a local policy are considered _local roles_. 
+* **Cluster Policies:** Roles that are applicable across all projects. Roles that exist in the cluster policy are considered _cluster roles_.
+
+To add cluster roles to a given user, you can execute, similar as before:
+
+```bash
+oadm policy add-cluster-role-to-user <role> <username>
+oadm policy remove-cluster-role-from-user <role> <username>
+```
+
+---
+
+Finally, you can also create your own roles, but that goes out of the scope of this training. Proper documentation and _how-tos_ are available [in the OpenShift documentation](https://docs.openshift.org/latest/admin_guide/manage_authorization_policy.html#manage-authorization-policy-creating-local-role) website.
+
+Custom roles are based on verbs and actions against a project or cluster, but they require modifying an knowing the YAML specification for each action.
+
+---
+
+## :closed_lock_with_key: Configuring user accounts and logging in
+
+OpenShift by default uses a login strategy called `AllowAll`. It essentially means that :rotating_light: **anyone using an arbitrary username and password can log in** as a basic user, create projects and manage them, as well as implement things like pod management -- confined to its own project / namespace -- or build control.
+
+When setting it up, the new login mechanism, the most basic one recommended by RedHat is `HTPasswd`. **It uses the Apache authentication methodology** which is a file stored on the master filesystem which contains username and hashed passwords, one per line.
+
+---
+
+A simple `htpasswd` file looks like this:
+
+```htpasswd
+developer:$apr1$/G3YyYZt$glgEKoCYXS0QKwxV8gAoc.
+developer2:$apr1$dNzEE.q3$qfhN1eKI5jSNr0zaQ2J/g.
+developer3:$apr1$9fXKJsKp$QJn24LrSJlK.xMsxyWdV21
+```
+
+You can remove the lines related to an specific user to prevent them from accessing the platform. 
+
+A word of caution though: authentication and authorization _are technically separated_. In different words, removing an user account **will not force him to log out** since it's already authenticated inside OpenShift.
+
+To remove his privileges from the OpenShift environment, **_before_ or _after_ you remove the entry from `htpasswd`**, you can execute the `oadm` command:
+
+```bash
+oadm policy remove-user <username>
+```
+
+--- 
+
+## Managing the Login Strategies in OpenShift
+
+// todo show the Opensahift config with the htpasswd enabled
+
+---
+
+## :closed_lock_with_key: Creating a developer account
+
+Let's create a developer account in OpenShift. Since our OpenShift installation has already configured the `HTPasswd` login strategy then we will add the new users we want them to log in. 
+
+First, we need to install the `httpd-tools` which include the `htpasswd` application: `yum install httpd-tools`, then, let's go ahead and create the `developer` account with password `oc2017`:
+
+```bash
+$ htpasswd -c $OPENSHIFT_CONFIG/htpasswd developer
+New password:
+Re-type new password:
+Adding password for user "developer"
+```
+
+You'll see that `htpasswd` will prompt you for the password.
+
+---
+
+Now let's check our work, by checking that, effectively, **the user account _did got_ registered**:
+
+```bash
+$ cat $OPENSHIFT_CONFIG/htpasswd
+developer:$apr1$/G3YyYZt$glgEKoCYXS0QKwxV8gAoc.
+```
+
+To add more accounts, you can run the same command as before, just omitting the `-c` flag, which stands for "create":
+
+```bash
+$ htpasswd $OPENSHIFT_CONFIG/htpasswd developer2
+New password:
+Re-type new password:
+Adding password for user "developer2"
+
+$ cat $OPENSHIFT_CONFIG/htpasswd
+developer:$apr1$/G3YyYZt$glgEKoCYXS0QKwxV8gAoc.
+developer2:$apr1$dNzEE.q3$qfhN1eKI5jSNr0zaQ2J/g.
+```
+
+---
+
+To delete accounts, you can:
+
+* Edit the file and remove the line where the user is declared
+* Run `htpasswd -D $OPENSHIFT_CONFIG/htpasswd <user>`
+
+Remember that by removing them here **it won't log them out from their current session**, you should also remove their privileges by issuing:
+
+```bash
+oadm policy remove-user <user>
+```
 
 ---
 
