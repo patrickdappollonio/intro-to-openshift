@@ -1484,3 +1484,23 @@ route "nodejs-in-docker" created
 $ curl expressapp.apps.example.com
 Hello world
 ```
+
+---
+
+## :interrobang: WARNING: Image "abc" runs as the 'root' user 
+
+An extra consideration at the time of using OpenShift is to think thoroughly about what containers are allowed to run inside OpenShift. This, because in some cases, **some containers have instructions to define volumes which are part of the main Host OS**. By allowing them to run privileged, **you're also allowing any command to run in your Host OS**, like `chown` or `chmod`.
+
+You can fix these containers **by modifying them and letting the caller to decide what files it should have access to**, or not to use those containers at all.
+
+---
+
+Additionally, **you can disable the verification check** and allow _any_ privileged container to run in your OpenShift environment by doing:
+
+```bash
+oadm policy add-scc-to-user anyuid -z default
+```
+
+Where `anyuid` allows the container to impersonate any User ID needed and the `default` makes it so any container will be affected by this rule. 
+
+**You can also define an `USER` value in the `Dockerfile`** which will change the UID to a non-root account.
