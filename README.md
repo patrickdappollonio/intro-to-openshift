@@ -834,7 +834,7 @@ oauthConfig:
       file: /etc/origin/master/htpasswd
 ```
 
-Note that there's a `file` configuration which points to the `htpasswd` file we will set up now.
+Note that there's a `file` configuration which points to the `htpasswd` file we will set up now. Changing the `identityProviders` settings require an OpenShift master restart so you can issue a `systemctl restart origin-master` to apply the changes.
 
 ---
 
@@ -890,8 +890,75 @@ oadm policy remove-user <user>
 
 ---
 
-## Creating OpenShift projects
+## :key: Login in as an User without being in the Master
+
+The last step of managing accounts is **allowing other users to log in from their workstations with ease**. This is pretty simple because everything happens using the CLI tool `oc`. Depending on your login strategy, sometimes it's possible to log in with a Token, but given our `HTPasswd` authentication, **we will log in with plain username and password, then exchange those for a token**.
+
+The first thing we need though is to download the CLI tools. To do so, you can download them from the OpenShift Origin Github page, at [github.com/openshift/origin/releases/latest](https://github.com/openshift/origin/releases/latest). The file you need is the `openshift-origin-client-tools`. Download the zip for your platform, extract it and move the `oc` binary somewhere in your `$PATH`.
+
+--- 
+
+Once you have the `oc` binary for your platform, we can log in remotely:
+
+```text
+$ oc login -u developer https://master.example.com:8443
+The server uses a certificate signed by an unknown authority.
+You can bypass the certificate check, but any data you send 
+to the server could be intercepted by others.
+Use insecure connections? (y/n): y
+
+Authentication required for https://master.example.com:8443 
+(openshift)
+Username: developer
+Password: ******
+Login successful
+
+You don't have any projects. You can try to create a new
+project, by running
+
+    oc new-project <projectname>
+
+Welcome! See 'oc help' to get started.
+```
+
+---
+
+Since **the OpenShift installation uses a :page_with_curl: self-signed certificate created during the installation**, we get the message regarding this, which we can discard for now. [You can customize the certificate later on](https://docs.openshift.com/enterprise/3.1/install_config/certificate_customization.html) by changing the settings in the `$OPENSHIFT_CONFIG/master-config.yaml` file, `servingInfo` section.
+
+The login flow also tells us we have _no_ projects which we will address shortly. To log out, you can easily do `oc logout` and it'll remove any tokens stored locally.
+
+---
+
+## :open_file_folder: Creating OpenShift projects
 
 An OpenShift project is the minimal object that holds a set of OpenShift elements needed to run our applications. **A project also serves as a namespace** to control and manage all the applications created inside the project.
 
+We already saw when logging in that creating projects is easy, you just have to execute:
 
+```bash
+$ oc new-project <project-name>
+```
+
+---
+
+Let's create a demo project to toy with. Issue the following command:
+
+<div style="font-size: 22px">
+
+```bash
+$ oc new-project demo
+Now using project "demo" on server "https://master.example.com:8443".
+
+You can add applications to this project with the 'new-app' command. 
+For example, try:
+
+   oc new-app centos/ruby-22-centos7~https://github.com/openshift/ruby-ex.git
+
+to build a new example application in Ruby.
+```
+
+</div>
+
+You'll also see that OpenShift offers you a boilerplate example, **a Ruby on Rails app with a MySQL database you can deploy in one command**. This little example here has _way more features_ that we would expect to see in a first glance, so we won't run that command yet.
+
+And just as a reminder, you can change projects by running `oc project <project-name>`.
