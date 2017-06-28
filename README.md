@@ -1236,4 +1236,187 @@ Hello, hello-docker-1-xs03r!
 
 ---
 
-Based on the same principle, **later on we will create full featured services by concatenating multiple YAML configuration files** to create _deployment configs_, _services_, _routes_ and so on. For now, this little example will stay in our `demo` project just to continue checking it out!
+Based on the same principle, **later on we will create full featured services by _merging_ multiple YAML configuration files** to create _deployment configs_, _services_, _routes_ and so on. For now, this little example will stay in our `demo` project just to continue checking it out!
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>OpenShift build methods</h2> 
+</div>
+
+---
+
+## :wrench: OpenShift Build Methods
+
+Now that we've managed to understand **what is needed to run and deploy stuff in OpenShift**, it's time to move to more interesting places. Let's talk about **_build methods_**. In OpenShift, you can orchestrate containers, but as you've already noticed, **you need a published container somewhere in a registry where you can pull the container down in OpenShift and run it**.
+
+This is usually the case for pre-baked containers, and to be fair, **it's the easiest and most simple way to define containers in OpenShift** since it doesn't interfere with the normal operation flow of the company procedures.
+
+But the truth is, sometimes this requires some extra "platforms" running, and it may not be the case. Let's explore other alternatives...
+
+
+---
+
+The current available :wrench: <strong><span style="color: #cc0000">OpenShift</span> build methods</strong> are:
+
+* **From a Container Image:** If this is the case, is just a matter of publishing the image in a Docker Registry and then pull it down like we already did with `patrickdappollonio/hello-docker`.
+* **From source code:** We have two options here...
+	* **From a Git source code:** If we give OpenShift a Git source code, _either web or local_, it'll scan the codebase and find if there's a `Dockerfile`, if so, it'll build a container with those instructions.
+	* **Detecting the language:** This feature is rather limited to, right now, Ruby, Java, NodeJS, PHP, Python and Perl. By looking at certain files it'll decide to use an specific "language builder" provided by RedHat.
+
+---
+
+## :white_check_mark: Testing the Git + Dockerfile strategy
+
+Let's avoid the middleman **and go directly to the Source Code with a Dockerfile** to see how everything works. We will deploy a NodeJS application which is a simple `Hello world` printed on screen with a NodeJS application. 
+
+The source code is here:
+
+```text
+https://github.com/patrickdappollonio/nodejs-in-docker
+```
+
+Now **let's create a new project just to hold this testing**, and leave the `hello-docker` in a different namespace for later use. Execute `oc new-project nodejs` to get the new namespace and switch there at the same time.
+
+---
+
+Then, let's create the app:
+
+<div style="font-size: 20px">
+
+```bash
+$ oc new-app https://github.com/patrickdappollonio/nodejs-in-docker.git
+--> Found Docker image 867601d (5 days old) from Docker Hub for "node:boron"
+
+    * An image stream will be created as "node:boron" that will track the source image
+    * A Docker build using source code from 
+      https://github.com/patrickdappollonio/nodejs-in-docker.git will be created
+      * The resulting image will be pushed to image stream "nodejs-in-docker:latest"
+      * Every time "node:boron" changes a new build will be triggered
+      * WARNING: this source repository may require credentials.
+                 Create a secret with your git credentials and use 'set build-secret' 
+                 to assign it to the build config.
+    * This image will be deployed in deployment config "nodejs-in-docker"
+    * Port 8080 will be load balanced by service "nodejs-in-docker"
+      * Other containers can access this service through the hostname "nodejs-in-docker"
+    * WARNING: Image "node:boron" runs as the 'root' user which may not be permitted 
+      by your cluster administrator
+
+--> Creating resources ...
+    imagestream "node" created
+    imagestream "nodejs-in-docker" created
+    buildconfig "nodejs-in-docker" created
+    deploymentconfig "nodejs-in-docker" created
+    service "nodejs-in-docker" created
+--> Success
+    Build scheduled, use 'oc logs -f bc/nodejs-in-docker' to track its progress.
+    Run 'oc status' to view your app.
+```
+
+</div>
+
+---
+
+**We can track the progress of the build flow**, which will clone the repository, run the `Dockerfile` and then generate a Docker container that will be published inside the Master's internal Docker Registry to be spread later on to all the nodes:
+
+<div style="font-size: 20px">
+
+```bash
+$ oc logs -f bc/nodejs-in-docker
+Cloning "https://github.com/patrickdappollonio/nodejs-in-docker.git" ...
+        Commit: ea839db5d34e2d13bb4a9820fccc666b64864079 (First upload.)
+        Author: "Patrick D'appollonio <dappollonio@hpe.com>"
+        Date:   Wed Jun 28 14:09:22 2017 -0600
+Step 1 : FROM node@sha256:19de5403244485481fa1c2ddf47d47debabbe8094a80fb3ccab082
+ ---> 867601d9565a
+# steps 2 to 8 removed for brevity
+Step 9 : ENV # some openshift env vars
+ ---> Running in c88d549c12fa
+ ---> 789539d70996
+Removing intermediate container c88d549c12fa
+Step 10 : LABEL # some openshift labels here
+ ---> Running in 7d5ae20c5e8b
+ ---> dec55a31e1ad
+Removing intermediate container 7d5ae20c5e8b
+Successfully built dec55a31e1ad
+Pushing image 172.30.21.231:5000/nodejs/nodejs-in-docker:latest ...
+Pushed 0/12 layers, 6% complete
+# ommited for brevity
+Pushed 12/12 layers, 100% complete
+Push successful
+```
+
+</div>
+
+---
+
+## :bookmark_tabs: Reviewing what we got:
+
+With the current flow we have from Git, we've got:
+
+* A way to create OpenShift-schedulable containers **from source code**
+* A way to generate containers **without publishing them to a public registry** or the Docker Hub
+* A build process based on Docker containers **that will give us a final container**
+* A full build process that, if defined in the `Dockerfile` **can also do testing before deploying**
+* A way to track the build progress using `oc logs`
+* A message telling us that the image is being published to our internal **private registry** installed on Master.
+
+---
+
+<h1 align="center" style="color: green">Wouldn't be nice that this flow could be <em><u>fully automated</u></em> so pushing a new change to the repository will trigger a new build and deploy?<h1>
+
+---
+
+## Introducing Build Configs and Webhooks :tada:
+
+**OpenShift Webhooks** allows any developer to continue building features for as long as the repo: a) maintains a way for OpenShift to track and validate the progress of the source code; and b) there's a webhook connected to the source control tool.
+
+In our case, we can get a webhook for Github as well as a generic webhook that, if called, **it'll re-trigger a build**, including cloning the repository and building the project again from source.
+
+This is all part of the OpenShift `BuildConfig`. In short, **Build Configs are a way to define how you want to build a project**. In our case, since the code is a Github repository, it knows that is part of a development process where people can continue to push code to that repository for as long as the project is being developed, **triggering builds if needed**.
+
+---
+
+## :earth_americas: How to get a Github / Generic WebHook
+
+Since we already created our project from Git, this is easy: the `oc` command allows us to inspect the `BuildConfig` it was created for us in the app `nodejs-in-docker`. Check the details by running:
+
+<div style="font-size: 18px">
+
+```bash
+$ oc get bc/nodejs-in-docker
+Name:           nodejs-in-docker
+Namespace:      nodejs
+
+# ommited for brevity
+
+Strategy:       Docker
+URL:            https://github.com/patrickdappollonio/nodejs-in-docker.git
+From Image:     ImageStreamTag node:boron
+Output to:      ImageStreamTag nodejs-in-docker:latest
+
+Triggered by:           Config, ImageChange
+Webhook GitHub:
+        URL:    https://master.example.com:8443/oapi/v1/namespaces/nodejs/buildconfigs/
+        		nodejs-in-docker/webhooks/Q3KHjB2lck8X6gnmHA1t/github
+Webhook Generic:
+        URL:            https://master.example.com:8443/oapi/v1/namespaces/nodejs/buildconfigs/
+        				nodejs-in-docker/webhooks/MG_-mKfHLpUa0xxSxIBy/generic
+        AllowEnv:       false
+
+Build                   Status          Duration        Creation Time
+nodejs-in-docker-1      complete        46s             2017-06-28 14:21:37 -0600 MDT
+```
+
+</div>
+
+---
+
+A couple of things to note here:
+
+* The `Strategy` mentions what strategy is the `BuildConfig` following.
+* The `URL` contains the Git repository where the code is coming from.
+* **It is possible to build from an specific branch**, by appending `#branch-name` after the Git URL when creating a `new-app`.
+* Since we're building starting from a `Dockerfile` which starts from its own Docker image -- in this case, `node:boron` -- then **there's also an automatic tracking mechanism** which rebuilds the project when this image from the Docker Hub gets updated.
+* **The output is also a Docker Image**, in this case `nodejs-in-docker:latest`
