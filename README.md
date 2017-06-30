@@ -1267,6 +1267,12 @@ The current available :wrench: <strong><span style="color: #cc0000">OpenShift</s
 
 ---
 
+> When working with the **_Detecting the language_** strategy, OpenShift **will first look for an image stream** that was registered to match the detected language, and if nothing is found, **it'll try to download the official Docker image for the given language**.
+> 
+> If this would be a Python example, then the downloaded image will be [`python:latest`](https://hub.docker.com/r/_/python/).
+
+---
+
 ## :white_check_mark: Testing the Git + Dockerfile strategy
 
 Let's avoid the middleman **and go directly to the Source Code with a Dockerfile** to see how everything works. We will deploy a NodeJS application which is a simple `Hello world` printed on screen with a NodeJS application. 
@@ -1459,6 +1465,21 @@ We won't cover too much about _patching_ or _secrets_, but the Documentation is 
 
 ---
 
+## :wrench: How about building an specific SHA commit?
+
+Another neat feature we can do, and **it'll help us learn how to start builds**, is to build from an specific SHA commit. Obviously, to take advantage of this feature, our build process **needs to begin in a Github repository**.
+
+Then, to start builds you just need to use the `oc start-build` command:
+
+```bash
+oc start-build \
+	--commit="022d87e4160c00274b63cdad7c238b5c6a299265"
+```
+
+The `oc start-build` allows multiple options, like starting from a specific folder, or from a previous build. For a full list of options, [check the extensive documentation](https://docs.openshift.org/latest/cli_reference/basic_cli_operations.html#start-build). Triggering builds **requires a `BuildConfig` already available in OpenShift** to trigger.
+
+---
+
 ## :earth_americas: Exposing our NodeJS app to the world
 
 ```bash
@@ -1504,3 +1525,487 @@ oadm policy add-scc-to-user anyuid -z default
 Where `anyuid` allows the container to impersonate any User ID needed and the `default` makes it so any container will be affected by this rule. 
 
 **You can also define an `USER` value in the `Dockerfile`** which will change the UID to a non-root account.
+
+---
+
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>Wrapping up OpenShift main concepts</h2> 
+</div>
+
+---
+
+So far, **we've talked about 5 main concepts**. Let's revisit them again to make sure we got them right:
+
+* **Build Configs:** A `BuildConfig` is a set of instructions to explicitly tell OpenShift how an specific project should be built. It uses a _build strategy_ to define how. We've seen the `Dockerfile` strategy as well as the _Source-to-Image_.
+* **Image Streams:** An `ImageStream` is a OpenShift hook-like flow which tracks the changes on a Docker image published in a Docker registry -- either public or private. The most common flow is that if a change is detected, a build and deploy is triggered.
+
+---
+
+* **Deployment Config:** A `DeploymentConfig` is the result of a `BuildConfig`, in short, when a project is built, it needs to be deployed to OpenShift. The flow is controlled by a `DeploymentConfig`.
+* **Services:** The `Services` are a software-defined network and load balancing strategy to Docker containers running an specific service. It can be our own project, or something like a Database, a Router or similar.
+* **Pods:** A Pod is the minimum element in our OpenShift environment. It's strictly a Docker container running in Kubernetes.
+
+The previous elements define an OpenShift application lifecycle.
+
+---
+
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>Storage for OpenShift</h2> 
+How to make stateless containers have `r+w` access
+</div>
+
+---
+
+## :floppy_disk: Storage
+
+So far, we've seen how to deploy applications using S2I as well as Docker container easily. We also mentioned that **the official strategy when working with Docker containers is to have _stateless containers_ that store data elsewhere**. 
+
+Sadly, **this is usually never the case with _self-hosted platforms_** where there are hard requirements or there aren't any cloud strategies. **In platforms like Amazon, this is easy, because you can use Amazon S3** (Simple-Storage-Service) which provides a set of APIs to store and retrieve data from specially created storage mechanisms. This, however, produces a _vendor lock-in_, since it forces you to use their APIs, **so a change in the storage mechanism usually means rewriting that portion** of the code.
+
+---
+
+## Docker storage: Volumes and Mounted Volumes
+
+**Docker does include an strategy to mount host directories** as part of the `docker run` flow. We saw it in action with `docker-http-server` where we overwrite the `/html` folder with our own in both Docker and Docker Compose. 
+
+There's also a secondary strategy built-in in Docker 1.12, which are **Docker Volumes**. In short, **Docker Volumes allows you to mount either network storage or securely-accessed local storage inside Docker containers**, and have transparently and seamlessly use that storage like if it were any filesystem.
+
+---
+
+This is a _huge_ benefit because **you don't need to necessarily change the code to make it work**. An `mkdir -p /mnt/storage/demo && touch /mnt/storage/demo/hello.txt` will continue to work because, for the Docker container, it's a transparent operation. This doesn't mean, however, that _when_ the Docker container gets destroyed, **the data stored outside the volume mounted / attached will get lost**.
+
+Additionally, **this also allows to seamlessly attach network volumes** like `nfs` volumes or, in our case, Gluster. It will require us to talk though about `PersistentVolumes` and `PersistentVolumeClaims`.
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>OpenShift <code>PersistentVolumes</code> & <code>PersistentVolumeClaims</code></h2> 
+</div>
+
+---
+
+## :floppy_disk: Persistent Volumes and Persistent Volume Claims
+
+OpenShift expands [the features provided by Kubernetes on Persistent Volumes and Volume Claims](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) by provide business-grade features related to RedHat technologies. Let's define, _in Layman's terms_ what both are:
+
+* `PersistentVolume`: It's a way to tell the OpenShift / Kubernetes cluster **that we have storage available to use** in the Docker containers. It is like a pizza: the whole pizza is the `PersistentVolume`.
+* `PersistentVolumeClaim`: Once the user needs storage, it will _request a slice of the pizza_ by creating a `PersistentVolumeClaim`. It's basically **a way to request part of the storage from the Storage Pool**. It's up to the OpenShift Administrator to accept or reject their request.
+
+---
+
+## Supported Storage Mechanisms
+
+The standard OpenShift installation supports using storage mechanisms such as: `NFS`, `GlusterFS`, `Ceph RBD`, `OpenStack Cinder`, `AWS EBS`, `GCE Persistent Disk`, `iSCSI`, and `Fibre Channel`.
+
+Other mechanisms _may be available_ **by modifying the internal installation of OpenShift / Kubernetes** but this may lead to trouble in the future if an OpenShift update is available, since the transition won't be seamless.
+
+---
+
+## `PersistentVolume` example with NFS
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mypv01
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: /tmp
+    server: 172.17.0.2
+```
+
+A `PersistentVolume` defines capacity [based on the Kubernetes model](https://github.com/kubernetes/kubernetes/blob/master/docs/design/resources.md) and it also defines an access mode...
+
+
+---
+
+## :electric_plug: `PersistentVolumes` access modes
+
+A defined `PersistentVolumeClaim` gets matched _automatically_ with a `PersistentVolume` based on two main conditions: **the capacity requested, and the access mode available**. The available `accessModes` are:
+
+| Access Mode     | CLI abbreviation | Description 									  |
+|-----------------|------------------|------------------------------------------------|
+| `ReadWriteOnce` | `RWO`            | Can be mounted as read-write by a single node  |
+| `ReadOnlyMany`  | `ROX`            | Can be mounted read-only by many nodes		  |
+| `ReadWriteMany` | `RWX`            | Can be mounted as read-write by many nodes	  |
+
+---
+
+> :heavy_exclamation_mark: Access Modes **are just a "label" in OpenShift / Kubernetes**. **They're not _enforced_** on OpenShift or Kubernetes' side, so it's the responsibility of the storage engine to enforce them and fail if needed. 
+
+---
+
+## `PersistentVolume` reclaim policy
+
+Once a `PersistentVolume` is no longer in use or deleted, there's a reclaim policy which allows the Administrator to reclaim the used storage space. Unfortunately, the current OpenShift standard sets the policy as `Retain`, which means that it's up to the OpenShift Administrator to remove the unused files from the storage to regain space.
+
+This is not because of a current issue of because of the feature was never thoroughly tested, but instead, because only two mechanisms suport the `Recycle` reclaim policy: `NFS` and `HostPath`.
+
+---
+
+## Available `PersistentVolume` reclaim policies
+
+| Policy    | Description                                            |
+|-----------|--------------------------------------------------------|
+| `Retain`  | The administrator must manually reclaim the used space |
+| `Recycle` | Basic scrub, as in `rm -rf /<volume>/*`                |
+
+As a final note, a `PersistentVolume` description can be modified after it's created to change the reclaim policy.
+
+
+---
+
+# `PersistentVolumeClaims`
+
+Once the administrator has defined `PersistentVolumes`, now when creating OpenShift resources such as services, **the Developer can request storage using `PersistentVolumeClaims`**. A claim looks like this:
+
+
+```yaml
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: "myclaim"
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+  volumeName: "mypv01"
+```
+
+You can use the `oc create -f <filename>` command to create the claim.
+
+---
+
+## Reviewing `PersistentVolume`s and `PersistentVolumeClaim`s
+
+An user can review the `PersistentVolumeClaim`s he created by executing the `oc` command:
+
+```bash
+$ oc get pvc
+NAME      STATUS    VOLUME    CAPACITY   ACCESSMODES   AGE
+myclaim   Pending   mypv01    0                        1m
+```
+
+An Administrator can see both `PV` and `PVC`s:
+
+```bash
+$ oc get pvc --all-namespaces
+NAMESPACE  NAME     STATUS   VOLUME  CAPAC. ACCESSMODES  AGE
+example    myclaim  Pending  mypv01  0                   1m
+```
+
+If there's a match, the `STATUS` will be `Bound`. 
+
+---
+
+Describing the `PersistentVolume`s will tell you **if they're bound or not to an specific claim**:
+
+```bash
+$ oc get pv
+NAME    LABELS  CAPACITY  ACCMODE  STATUS  CLAIM
+mypv01  map[]   5Gi       RWO      Bound   example / myclaim
+```
+
+In this case, in the `CLAIM` section it's listed both the namespace, `example` and the name of the claim which this volume is attached to, in this case `myclaim`.
+
+---
+
+You can also describe `PersistentVolumeClaim`s to see how they were set:
+
+```bash
+$ oc describe pvc/myclaim -n example
+Name:           myclaim
+Namespace:      example
+StorageClass:
+Status:         Pending
+Volume:         mypv01
+Labels:         <none>
+Capacity:       0
+Access Modes:
+No events.
+```
+
+---
+
+## Mounting storage from the `PV`/`PVC` into the Pod
+
+By having a bound `PVC` to a `PV`, then now it's possible to use that storage during the lifecycle of our Pod. To do so, you can create or modify a Pod and add the volume:
+
+```yaml
+apiVersion: "v1"
+kind: "Pod"
+spec:
+  containers:
+    - name: "example-pod"
+      image: "patrickdappollonio/hello-docker"
+      volumeMounts:
+        - mountPath: "/var/www/html"
+          name: "internal-volume-name"
+  volumes:
+    - name: "internal-volume-name"
+      persistentVolumeClaim:
+        claimName: "myclaim"
+```
+
+---
+
+**The container will mount the volume** seamlessly inside /var/www/html, and the data will live inside the `PersistentVolume`, which in our case is an NFS server:
+
+```yaml
+nfs:
+  path: /tmp
+  server: 172.17.0.2
+```
+
+Which means that any file created in the pod, like `/var/www/html/example.txt` will be stored at `172.17.0.2:/tmp/example.txt`. If a second container is created using the same Volume pointing to the same Claim, then **they will both share the files in the NFS server**. A full documentation on [how to share the same volume across multiple pods is available here](https://docs.openshift.com/enterprise/3.2/install_config/storage_examples/shared_storage.html).
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>OpenShift Templates</h2> 
+Automating the Deployment of common Projects
+</div>
+
+---
+
+## :page_with_curl: OpenShift Templates?
+
+So far, you've seen that the whole overall process of creating projects in OpenShift **consists of pretty much repetitive tasks that you can definitely automate if there were a way to do so**. OpenShift offers the possibility of templating, which is a set of `Services`, `DeploymentConfigs`, `Routes`, `PersistentVolumeClaims` and so on which are part of a collection inside a template object. 
+
+When using this method, **you can tell OpenShift to create templates that any other user can, later on use** by changing the values you set as customizable. Those values **can be things like database usernames and passwords, certain paths, project names**, and so on.
+
+---
+
+## :page_with_curl: Example OpenShift Template with Redis
+
+<div style="font-size: 18px">
+
+```yaml
+apiVersion: v1
+kind: Template
+metadata:
+  name: redis-template
+  annotations:
+    description: "Description"
+    iconClass: "icon-redis"
+    tags: "database,nosql"
+objects:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: redis-master
+  spec:
+    containers:
+    - env:
+      - name: REDIS_PASSWORD
+        value: ${REDIS_PASSWORD}
+      image: redis
+      name: master
+      ports:
+      - containerPort: 6379
+        protocol: TCP
+parameters:
+- description: Password used for Redis authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: REDIS_PASSWORD
+labels:
+  redis: master
+```
+
+</div>
+
+---
+
+The template from the previous slide defines **a way to automate the creation of OpenShift pods that run Redis** by simply defining one object inside the `objects` list. Note that the `objects` array is pretty much embedding the YAML definition of a Pod, including even the `apiVersion`. 
+
+You can add **as many elements belonging to OpenShift** as you please inside the `objects` parameter, like `Services`, `DeploymentConfigs`, `Routes` and so on. It's up to you to mix-and-match the level of automation you decide to gain by doing so.
+
+Then, to create the given template in OpenShift, **an administrator needs to run `oc create -f <template-file>.yaml` to make it globally available**. This process needs to run in the `openshift` namespace. If users want to make their own templates, they can also run `oc create` as well.
+
+---
+
+Later on, users can benefit from templates by creating a YAML with the parameters interpolated by issuing:
+
+```bash
+oc process -f <template-file> -p PARAMETER=value
+```
+
+Do note that the command above doesn't require you to have the template in OpenShift first, since you're specifying the template definition with the `-f` parameter. You can also use a pre-registered template by issuing:
+
+```bash
+oc process -p PARAMETER=value <template-name>
+```
+
+It's possible to list all of the parameters you can change in a template by running:
+
+```bash
+oc process --parameters <template-name>
+```
+
+---
+
+We've seen that the previous commands just process the template into another YAML definition. But we also know that the `oc create` command is very powerful, and **allows you to pass YAML definitions to it, to create the actual services**. You can always **save the output of the `oc process` command to a file and then use `oc create`**, but you can also pipe the command as follows:
+
+```bash
+oc process -f <template-file> \
+	-p PARAMETER=value | oc create -f -
+```
+
+Note the dash at the end of the `oc create` command, **which is a standard to receive details piped from another command**. The command above will both create the YAML definition and also use it to create all the required elements in the OpenShift environment.
+
+---
+
+## Final template trick: create templates from already deployed projects
+
+It's also possible to just create **one** project by hand with all the requirements, **and then just export everything as a template**. Eventually **you can modify the file, add your own parameters, set extra details and so on**, but it's a nice way to not start from scratch. To do so, execute the following:
+
+```bash
+oc export all --as-template=<template_name> \
+	> my-new-template.yaml
+```
+
+This will take the entire project and export it as a template. It'll include: `BuildConfig`, `DeploymentConfig`, `ImageStream`, `Pod`, `Route`, `Service` as well as some other OpenShift extras not covered in this training.
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>Health checks</h2> 
+Restarting pods which aren't working
+</div>
+
+---
+
+## Health checks
+
+OpenShift relies on the Kubernetes probes to perform health checks against containers and decide what to do with them:
+
+* **Liveness probe:** It's a way to detect if the container is still running. If this check fails, **it'll kill the container and based on the restart policy, it'll either restart it or keep it closed**.
+* **Readiness probe:** Usually, some services may require a bit of a headstart before they can start accepting requests. This is usually true when you're loadbalancing pods, you might not want to route traffic to something that's not yet receiving traffic. **This probe checks against that and if it's not ready, it won't route traffic to it**.
+
+---
+
+## Configuring Kubernetes probes
+
+There are three ways to configure probes: just one for readiness, but two for liveness.
+
+**HTTP Checks:** Kubernetes uses an HTTP request to detect the readiness of the pod:
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 15
+  timeoutSeconds: 1
+```
+
+---
+
+**Container execution check:** Kubernetes will run a command inside the container and an exit status of `0` (zero) means it's live:
+
+```yaml
+livenessProbe:
+  exec:
+    command:
+    - "cat /tmp/health"
+  initialDelaySeconds: 15
+  timeoutSeconds: 1
+```
+
+**TCP Socket check:** Kubernetes opens a tcp connection to the container. If it manages to establish a connection then it's considered "healthy":
+
+```yaml
+livenessProbe:
+  tcpSocket:
+    port: 8080
+  initialDelaySeconds: 15
+  timeoutSeconds: 1
+```
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>Pod autoscaling</h2> 
+Running multiple instances of a pod to handle more workload
+</div>
+
+---
+
+## Pod autoscaling
+
+Currently, **OpenShift only supports one way to autoscale pods, which is based on CPU Usage**. Of course, you can manually scale pods by creating them yourself either using the UI or the `oc create` command with a YAML definition of a pod.
+
+To autoscale a pod based on its CPU usage you should run the following:
+
+```bash
+oc autoscale dc/<deployment-config-name> \
+	--min 1 --max 10 --cpu-percent=80
+```
+
+This will autoscale the deployment configuration to add more pods if needed, based on a CPU usage of up to 80%.
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>UI Walkthrough</h2> 
+Let's see a <em>button-driven</em> approach
+</div>
+
+---
+
+<p align="center"> <img src="images/openshift-ui.png"> </p>
+
+---
+
+<div style="text-align: center">
+<img src="images/openshift-logo.png">
+<h2>Final Part: Troubleshooting / Status Check</h2> 
+Check how healthy your OpenShift installation is
+</div>
+
+---
+
+## `oc adm diagnostics`
+
+Every once in a while it's good to see what things are correct and which ones are wrong in our OpenShift installation. That's a rather easy task -- even when fixing it may not be as straightforward as detecting it -- given the fact that OpenShift includes a health check for the whole OpenShift ecosystem, as well as a full-run of the whole lifecycle of an OpenShift project.
+
+To run it, execute the following in the master: `oc adm diagnostics`
+
+The output is rather long and **it will report back everything that it doesn't _seem_ right**. Some of those things may be related to orphan things that stayed even when the Developer removed the surrounding services, **which means that it's not necessarily harmful for your environment**, but instead, it's a report of things that may require a second look.
+
+---
+
+Finally, the [OpenShift Administration Guide](https://docs.openshift.com/container-platform/3.4/admin_guide/index.html) includes everything related to how to troubleshoot and solve problems with common stuff that may break due to unadverted changes, like:
+
+* Router
+* Nodes and synchronization
+* Pod scheduling
+* Deployment configuration
+* Secrets
+
+And so on. Like it was mentioned in the beginning, there difference between **OpenShift Origin**, **Container Platform**, **Enterprise** and **hosted** are still a thin line, **so _usually_ the documentation for one works for all others**, unless stated otherwise.
+
+---
+
+<br><br><br><br><br><br><br>     
+
+![](images/hpe.png)
+
+# Questions?
