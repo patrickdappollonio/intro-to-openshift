@@ -941,6 +941,24 @@ $ oc new-project <project-name>
 
 ---
 
+## Giving `developer2` admin access to `<project-name>`
+
+One of the things we will also need to manage within our project is allowing access from other users to our own projects. Internally, we're administrators of our project too, so you can use the `oadm` tool (or also `oc adm` which will also work) to manage who can use and how, our different projects.
+
+In an specific project, to grant an user permissions, you can do:
+
+```bash
+dev1: $ oc adm policy add-role-to-user <role> <username>
+```
+
+Where `<role>` can be one of the many roles. You can revert that by doing:
+
+```bash
+dev1: $ oc adm policy remove-role-from-user <role> <username>
+```
+
+---
+
 Let's create a demo project to toy with. Issue the following command:
 
 <div style="font-size: 22px">
