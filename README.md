@@ -2008,4 +2008,4 @@ And so on. Like it was mentioned in the beginning, there difference between **Op
 
 ![](images/hpe.png)
 
-# Questions?
+<h1><span style="color: #cc0000">Questions?</span><h1>
