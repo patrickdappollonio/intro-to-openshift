@@ -13,7 +13,7 @@ rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
 yum clean all
 
 # Enable the repo and install `kernel-ml`
-yum --enablerepo=elrepo-kernel install kernel-ml
+yum --enablerepo=elrepo-kernel install kernel-ml -y
 
 # Once installed, change the default grub boot order to use
 # the recently installed kernel
