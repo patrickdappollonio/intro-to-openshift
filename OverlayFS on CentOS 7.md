@@ -23,27 +23,30 @@ grub2-set-default 0
 echo "overlay" > /etc/modules-load.d/overlay.conf
 ```
 
-Once that's done, change the Docker configuration on CentOS to use `overlay` 
-(this will only work on Docker installed from EPEL, and running on version 1.12):
+Once that's done, you can restart the machine and once restarted then change the Docker configuration 
+on CentOS to use `overlay`.
+
+To enable overlay in Docker, use the following command (this will only work on Docker installed from 
+EPEL, and running on version 1.12):
 
 ```bash
 echo "DOCKER_STORAGE_OPTIONS='--storage-driver=overlay'" > /etc/sysconfig/docker-storage
 ```
 
-Reboot the machine to enable the `overlay` module and the new kernel, and then
-either enable and/or restart the Docker service with `systemctl`. You can verify it worked by
+You can also change the storage using the `/etc/docker/daemon.json` Docker control file, and add the 
+following (appending it with proper JSON format if there's already something on it):
+
+```json
+{
+  "storage-driver": "overlay"
+}
+```
+
+Restart the Docker service with `systemctl`. You can verify `overlay` worked by
 executing `docker info` and checking the `Storage` section, it'll be something like:
 
 ```text
 Server Version: 1.12.6
 Storage Driver: overlay
  Backing Filesystem: xfs
-```
-
-You can also change the storage using the `/etc/docker/daemon.json` Docker control file, and add the following (appending it with proper JSON format if there's already something on it):
-
-```json
-{
-  "storage-driver": "overlay"
-}
 ```
