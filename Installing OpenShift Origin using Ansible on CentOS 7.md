@@ -138,7 +138,6 @@ ansible_become=true
 openshift_deployment_type=origin
 openshift_master_default_subdomain=osapps.example.com
 openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
-openshift_disable_check=package_version
 
 # host group for masters
 [masters]   
