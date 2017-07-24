@@ -39,3 +39,11 @@ Server Version: 1.12.6
 Storage Driver: overlay
  Backing Filesystem: xfs
 ```
+
+You can also change the storage using the `/etc/docker/daemon.json` Docker control file, and add the following (appending it with proper JSON format if there's already something on it):
+
+```json
+{
+  "storage-driver": "overlay"
+}
+```
