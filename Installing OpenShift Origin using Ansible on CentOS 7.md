@@ -25,7 +25,7 @@ SELINUXTYPE=targeted
 You'll also need to **install some extra dependencies** that the OpenShift installation will use, run the following command:
 
 ```bash
-yum install wget git net-tools bind-utils iptables-services bridge-utils bash-completion kexec sos psacct
+yum install wget git net-tools bind-utils iptables-services bridge-utils bash-completion kexec sos psacct -y
 ```
 
 It's also advisable to update the system by running `yum update` and installing all the extra dependencies.
