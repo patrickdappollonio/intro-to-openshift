@@ -20,8 +20,6 @@ SELINUX=enforcing
 SELINUXTYPE=targeted  
 ```
 
-
-
 #### Extra dependencies + EPEL Repository for Yum
 
 You'll also need to **install some extra dependencies** that the OpenShift installation will use, run the following command:
@@ -73,27 +71,6 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/docker.service 
 
 $ systemctl start docker
 ```
-
-
-
-#### Hostname
-
-The last step is to **configure the hostname** of the machine to match the fqdn one. In RPM environments, this is done by setting `hostnamectl` to a proper value. Use the following commands in the following order (because order matters, either it'll override certain defaults):
-
-```bash
-# Check the current configuration, verify both the 
-# "transient" hostname as well as the "static" hostname
-hostnamectl status
-
-# Change the transient hostname first to be the first part of
-# the given FQDN
-hostnamectl set-hostname "master"
-
-# Change the static hostname to be the full FQDN
-hostnamectl set-hostname "master.example.com" --static
-```
-
-
 
 #### NetworkManager
 
