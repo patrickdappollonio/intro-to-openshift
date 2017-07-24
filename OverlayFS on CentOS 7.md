@@ -26,6 +26,19 @@ echo "overlay" > /etc/modules-load.d/overlay.conf
 Once that's done, you can restart the machine and once restarted then change the Docker configuration 
 on CentOS to use `overlay`.
 
+To verify OverlayFS is enabled, you can check the list of available modules:
+
+```bash
+lsmod | grep overlay
+```
+
+It should print something like this:
+
+```text
+# lsmod | grep overlay
+overlay                57344  0
+```
+
 To enable overlay in Docker, use the following command (this will only work on Docker installed from 
 EPEL, and running on version 1.12):
 
