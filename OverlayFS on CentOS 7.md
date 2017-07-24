@@ -39,6 +39,8 @@ It should print something like this:
 overlay                57344  0
 ```
 
+## Configure Overlay in Docker 
+
 To enable overlay in Docker, use the following command (this will only work on Docker installed from 
 EPEL, and running on version 1.12):
 
