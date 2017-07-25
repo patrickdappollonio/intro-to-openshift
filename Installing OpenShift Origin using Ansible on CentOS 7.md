@@ -52,7 +52,7 @@ Finally, a last step, is to confirm the CentOS Extra repo is enabled. To do so, 
 Now, once we have the previous packages in place, it's time to install Docker. To do so, please just run:
 
 ```bash
-yum install docker
+yum -y install docker
 ```
 
 Do please check that the version you're installing comes from the CentOS `extras` repo. Some extra packages may likely be installed like `container-selinux`.
@@ -77,9 +77,7 @@ $ systemctl start docker
 The last requirement for our environment is to have `NetworkManager` enabled and started in our environment. To install and enable it, execute the following commands:
 
 ```bash
-yum install -y NetworkManager
-systemctl enable NetworkManager
-systemctl start NetworkManager
+yum install -y NetworkManager && systemctl enable NetworkManager && systemctl start NetworkManager
 ```
 
 This should download, enable and start the `NetworkManager` service, required by the Ansible installation method.
