@@ -1,4 +1,4 @@
-# OverlayFS on CentOS 7
+# OverlayFS on CentOS 7 and OpenShift
 
 Stop Docker and remove the `devicemapper` folder from your hard drive:
 
@@ -20,3 +20,12 @@ Start Docker once again with `systemctl start docker` and run a `docker info` to
 Storage Driver: overlay
  Backing Filesystem: xfs
 ```
+
+Then edit the Ansible hosts file (usually `/etc/ansible/hosts`) and add the following two variables:
+
+```yaml
+docker_storage_driver=overlay
+openshift_docker_selinux_enabled=False
+```
+
+We disable SELinux in Containers [due to a kernel issue](https://www.projectatomic.io/blog/2015/06/notes-on-fedora-centos-and-docker-storage-drivers/), but SELinux is still installed on the Host OS.
